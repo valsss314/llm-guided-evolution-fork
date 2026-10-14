@@ -73,12 +73,12 @@ if __name__ == '__main__':
     create_save_dir(save_dir)
 
 
-    train_df = pd.read_csv('data/processed_train.csv')
+    train_df = pd.read_csv("data/processed_train.csv", index_col=0)
     X = train_df.drop("Survived", axis=1)
     y = train_df["Survived"]
 
     X_train, X_val, y_train, y_val = train_test_split(
-    X, y, test_size=0.2, random_state=0)
+    X, y, test_size=0.33, random_state=10)
 
     model = model_module.Model()
     model.fit(X_train, y_train)
