@@ -13,6 +13,9 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import random
 
+from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import roc_auc_score
+
 
 def create_save_dir(save_root):
     if not p(save_root).exists():
@@ -77,24 +80,46 @@ if __name__ == '__main__':
     X = train_df.drop("Survived", axis=1)
     y = train_df["Survived"]
 
-    X_train, X_val, y_train, y_val = train_test_split(
-    X, y, test_size=0.33, random_state=10)
 
-    model = model_module.Model()
-    model.fit(X_train, y_train)
-    predictions = model.predict(X_val)
+    skf = StratifiedKFold(
+        n_splits=5,
+        shuffle=True,
+        random_state=10
+    )
 
+    fold_aucs = []
+    fp_count, fn_count = 0, 0
 
-    matrix = sklearn.metrics.confusion_matrix(y_val, predictions)
-    # Print out FP, FN
-    print(matrix[0,1], matrix[1,0])
-    fp_count = matrix[0,1]
-    fn_count = matrix[1,0]
+    for train_idx, val_idx in skf.split(X, y):
+        X_train = X.iloc[train_idx]
+        X_val = X.iloc[val_idx]
+        y_train = y.iloc[train_idx]
+        y_val = y.iloc[val_idx]
+        model = model_module.Model()
+        model.fit(X_train, y_train)
+        prob_predictions = model.predict_prob(X_val)
+        predictions = model.predict(X_val)
+        auc = roc_auc_score(y_val,prob_predictions)
+        fold_aucs.append(auc)
+        
+        matrix = sklearn.metrics.confusion_matrix(y_val, predictions)
+        fp_count += matrix[0,1]
+        fn_count += matrix[1,0]
+
+        print(
+            f"Fold {len(fold_aucs)}: "
+            f"train={len(train_idx)}, "
+            f"val={len(val_idx)}, "
+            f"AUC={auc:.4f}"
+        )
+
+    mean_roc_auc = sum(fold_aucs) / len(fold_aucs)
+
     """
     Count Total parameters in the Model
     model.parameters() returns an iterable of all the model's parameter
     """
-    results_text = f"fp_count,fn_count\n{fp_count},{fn_count}"
+    results_text = f"roc_auc,fp_count,fn_count\n{mean_roc_auc},{fp_count},{fn_count}"
 
     """
     This line formats the results into comma-separated string

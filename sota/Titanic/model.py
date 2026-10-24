@@ -9,5 +9,8 @@ class Model:
     def fit(self, X, y):
       self.classifier.fit(X, y)
 
-    def predict(self, X):
+    def predict(self, X): # currntly returns 0 or 1
        return self.classifier.predict(X)
+
+    def predict_prob(self, X):
+       return self.classifier.predict_proba(X)[:, 1]
